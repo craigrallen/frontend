@@ -8,6 +8,7 @@ import "../../../../components/ha-svg-icon";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import type { EnergyData, EnergyPreferences } from "../../../../data/energy";
 import {
+  computeConsumptionSingle,
   formatPowerShort,
   getEnergyDataCollection,
   getPowerFromState,
@@ -623,72 +624,13 @@ class HuiPowerSankeyCard
         }
       });
 
-    // Calculate total consumption
-    const used_total = from_grid + solar + from_battery - to_grid - to_battery;
-
-    // Determine power routing using priority logic
-    // Priority: Solar -> Battery_In, Solar -> Grid_Out, Battery_Out -> Grid_Out,
-    // Grid_In -> Battery_In, Solar -> Consumption, Battery_Out -> Consumption, Grid_In -> Consumption
-
-    let solar_remaining = solar;
-    let grid_remaining = from_grid;
-    let battery_remaining = from_battery;
-    let to_battery_remaining = to_battery;
-    let to_grid_remaining = to_grid;
-    let used_total_remaining = Math.max(used_total, 0);
-
-    let grid_to_battery = 0;
-    let battery_to_grid = 0;
-    let solar_to_battery = 0;
-    let solar_to_grid = 0;
-    let used_solar = 0;
-    let used_battery = 0;
-    let used_grid = 0;
-
-    // Handle excess grid input to battery first
-    const excess_grid_in_after_consumption = Math.max(
-      0,
-      Math.min(to_battery_remaining, grid_remaining - used_total_remaining)
-    );
-    grid_to_battery += excess_grid_in_after_consumption;
-    to_battery_remaining -= excess_grid_in_after_consumption;
-    grid_remaining -= excess_grid_in_after_consumption;
-
-    // Solar -> Battery_In
-    solar_to_battery = Math.min(solar_remaining, to_battery_remaining);
-    to_battery_remaining -= solar_to_battery;
-    solar_remaining -= solar_to_battery;
-
-    // Solar -> Grid_Out
-    solar_to_grid = Math.min(solar_remaining, to_grid_remaining);
-    to_grid_remaining -= solar_to_grid;
-    solar_remaining -= solar_to_grid;
-
-    // Battery_Out -> Grid_Out
-    battery_to_grid = Math.min(battery_remaining, to_grid_remaining);
-    battery_remaining -= battery_to_grid;
-    to_grid_remaining -= battery_to_grid;
-
-    // Grid_In -> Battery_In (second pass)
-    const grid_to_battery_2 = Math.min(grid_remaining, to_battery_remaining);
-    grid_to_battery += grid_to_battery_2;
-    grid_remaining -= grid_to_battery_2;
-    to_battery_remaining -= grid_to_battery_2;
-
-    // Solar -> Consumption
-    used_solar = Math.min(used_total_remaining, solar_remaining);
-    used_total_remaining -= used_solar;
-    solar_remaining -= used_solar;
-
-    // Battery_Out -> Consumption
-    used_battery = Math.min(battery_remaining, used_total_remaining);
-    battery_remaining -= used_battery;
-    used_total_remaining -= used_battery;
-
-    // Grid_In -> Consumption
-    used_grid = Math.min(used_total_remaining, grid_remaining);
-    grid_remaining -= used_grid;
-    used_total_remaining -= used_grid;
+    const flow = computeConsumptionSingle({
+      from_grid,
+      to_grid,
+      solar,
+      to_battery,
+      from_battery,
+    });
 
     return {
       solar,
@@ -696,14 +638,14 @@ class HuiPowerSankeyCard
       to_grid,
       from_battery,
       to_battery,
-      grid_to_battery,
-      battery_to_grid,
-      solar_to_battery,
-      solar_to_grid,
-      used_solar,
-      used_grid,
-      used_battery,
-      used_total: Math.max(0, used_total),
+      grid_to_battery: flow.grid_to_battery,
+      battery_to_grid: flow.battery_to_grid,
+      solar_to_battery: flow.solar_to_battery,
+      solar_to_grid: flow.solar_to_grid,
+      used_solar: flow.used_solar,
+      used_grid: flow.used_grid,
+      used_battery: flow.used_battery,
+      used_total: Math.max(0, flow.used_total),
     };
   }
 
