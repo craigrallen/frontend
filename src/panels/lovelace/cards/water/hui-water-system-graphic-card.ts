@@ -3,7 +3,6 @@ import { css, html, LitElement, nothing, svg } from "lit";
 import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import "../../../../components/ha-card";
-import "../../../../components/ha-svg-icon";
 import type { EnergyData } from "../../../../data/energy";
 import {
   formatFlowRateShort,
@@ -22,6 +21,7 @@ const DEFAULT_CONFIG: Partial<WaterSystemGraphicCardConfig> = {
 const TANK_PERCENT_PATTERNS = [/tank/i, /water/i, /(level|pct|percent|percentage)/i];
 const TANK_VOLUME_PATTERNS = [/tank/i, /water/i, /(liter|litre|volume|remaining)/i];
 const PUMP_PATTERNS = [/pump/i, /water|well|pressure/i];
+const WATER_MAKER_PATTERNS = [/(water.?maker|desal|desalinator|reverse.?osmosis|maker)/i];
 
 @customElement("hui-water-system-graphic-card")
 export class HuiWaterSystemGraphicCard
@@ -42,6 +42,8 @@ export class HuiWaterSystemGraphicCard
     pumpState: undefined as string | undefined,
     pumpFlowRate: undefined as string | undefined,
     pumpPower: undefined as string | undefined,
+    waterMakerState: undefined as string | undefined,
+    waterMakerFlowRate: undefined as string | undefined,
   };
 
   protected hassSubscribeRequiredHostProps = ["_config"];
@@ -103,6 +105,10 @@ export class HuiWaterSystemGraphicCard
       this._config.entity_pump_flow_rate || this._discovered.pumpFlowRate;
     const pumpPowerEntity =
       this._config.entity_pump_power || this._discovered.pumpPower;
+    const waterMakerStateEntity =
+      this._config.entity_water_maker_state || this._discovered.waterMakerState;
+    const waterMakerFlowRateEntity =
+      this._config.entity_water_maker_flow_rate || this._discovered.waterMakerFlowRate;
 
     const tankLevel = this._readPercent(
       tankLevelEntity,
@@ -122,6 +128,25 @@ export class HuiWaterSystemGraphicCard
     const pumpPowerW = this._readPowerW(pumpPowerEntity);
 
     const pumpOn = this._isPumpOn(pumpStateEntity, flowRateLMin, pumpPowerW);
+
+    const waterMakerFlowRateLMin = waterMakerFlowRateEntity
+      ? getFlowRateFromState(this.hass.states[waterMakerFlowRateEntity])
+      : undefined;
+    const waterMakerOn = this._isPumpOn(
+      waterMakerStateEntity,
+      waterMakerFlowRateLMin,
+      undefined
+    );
+
+    const monitorRows = this._buildMonitorRows(
+      pumpFlowRateEntity,
+      flowRateLMin,
+      pumpPowerW,
+      pumpOn,
+      waterMakerFlowRateEntity,
+      waterMakerFlowRateLMin,
+      waterMakerOn
+    );
 
     const fillHeight = Math.round((Math.max(0, Math.min(100, tankLevel || 0)) / 100) * 112);
     const fillY = 128 - fillHeight;
@@ -182,9 +207,101 @@ export class HuiWaterSystemGraphicCard
               </text>
             </svg>
           </div>
+
+          ${monitorRows.length
+            ? html`<div class="monitor-list">
+                ${monitorRows.map(
+                  (row) => html`<div class="monitor-row">
+                    <span class="name">${row.name}</span>
+                    <span class="state ${row.on ? "on" : "off"}">
+                      ${row.on ? "Running" : "Idle"}
+                    </span>
+                    <span class="metric">
+                      ${row.flow !== undefined
+                        ? formatFlowRateShort(
+                            this.hass.locale,
+                            this.hass.config.unit_system.length,
+                            row.flow
+                          )
+                        : "--"}
+                      ${row.powerW !== undefined
+                        ? html` · ${Math.round(row.powerW)} W`
+                        : nothing}
+                    </span>
+                  </div>`
+                )}
+              </div>`
+            : nothing}
         </div>
       </ha-card>
     `;
+  }
+
+  private _buildMonitorRows(
+    pumpFlowRateEntity: string | undefined,
+    pumpFlowRateLMin: number | undefined,
+    pumpPowerW: number | undefined,
+    pumpOn: boolean,
+    waterMakerFlowRateEntity: string | undefined,
+    waterMakerFlowRateLMin: number | undefined,
+    waterMakerOn: boolean
+  ): Array<{ name: string; on: boolean; flow?: number; powerW?: number }> {
+    const rows: Array<{ name: string; on: boolean; flow?: number; powerW?: number }> = [];
+
+    rows.push({
+      name: "Main pump",
+      on: pumpOn,
+      flow: pumpFlowRateLMin,
+      powerW: pumpPowerW,
+    });
+
+    if (waterMakerFlowRateEntity || this._config?.entity_water_maker_state) {
+      rows.push({
+        name: "Water maker",
+        on: waterMakerOn,
+        flow: waterMakerFlowRateLMin,
+      });
+    }
+
+    const excluded = new Set(
+      [pumpFlowRateEntity, waterMakerFlowRateEntity].filter(Boolean) as string[]
+    );
+
+    for (const device of this._data?.prefs.device_consumption_water || []) {
+      if (!device.stat_rate || excluded.has(device.stat_rate)) {
+        continue;
+      }
+      const idCheck = `${device.name || ""} ${device.stat_rate}`;
+      if (!PUMP_PATTERNS.some((p) => p.test(idCheck))) {
+        continue;
+      }
+
+      const flow = getFlowRateFromState(this.hass.states[device.stat_rate]);
+      rows.push({
+        name: device.name || this.hass.states[device.stat_rate]?.attributes.friendly_name || device.stat_rate,
+        on: (flow || 0) > 0.05,
+        flow,
+      });
+    }
+
+    if (this._config?.monitor_entities) {
+      for (const entityId of this._config.monitor_entities) {
+        const state = this.hass.states[entityId];
+        if (!state) continue;
+        const flow = getFlowRateFromState(state);
+        const powerW = this._readPowerW(entityId);
+        const on = this._isPumpOn(entityId, flow, powerW);
+
+        rows.push({
+          name: state.attributes.friendly_name || entityId,
+          on,
+          flow,
+          powerW,
+        });
+      }
+    }
+
+    return rows;
   }
 
   private _discoverEntities() {
@@ -229,6 +346,24 @@ export class HuiWaterSystemGraphicCard
       this._discovered.pumpPower = pick("sensor", (s) => {
         const dc = s.attributes.device_class;
         return dc === "power" && PUMP_PATTERNS.some((r) => r.test(s.entity_id));
+      });
+    }
+
+    if (!this._config?.entity_water_maker_state) {
+      this._discovered.waterMakerState =
+        pick("binary_sensor", (s) =>
+          WATER_MAKER_PATTERNS.some((r) => r.test(s.entity_id))
+        ) ||
+        pick("switch", (s) => WATER_MAKER_PATTERNS.some((r) => r.test(s.entity_id)));
+    }
+
+    if (!this._config?.entity_water_maker_flow_rate) {
+      this._discovered.waterMakerFlowRate = pick("sensor", (s) => {
+        const dc = s.attributes.device_class;
+        return (
+          dc === "volume_flow_rate" &&
+          WATER_MAKER_PATTERNS.some((r) => r.test(s.entity_id))
+        );
       });
     }
   }
@@ -399,6 +534,49 @@ export class HuiWaterSystemGraphicCard
       fill: var(--primary-text-color);
       font-size: 12px;
       font-weight: 500;
+    }
+
+    .monitor-list {
+      margin-top: 4px;
+      border-top: 1px solid var(--divider-color);
+      padding-top: 6px;
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .monitor-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .monitor-row .name {
+      color: var(--primary-text-color);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .monitor-row .state {
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .monitor-row .state.on {
+      color: var(--energy-water-color);
+    }
+
+    .monitor-row .state.off {
+      color: var(--secondary-text-color);
+    }
+
+    .monitor-row .metric {
+      color: var(--secondary-text-color);
+      font-variant-numeric: tabular-nums;
     }
   `;
 }

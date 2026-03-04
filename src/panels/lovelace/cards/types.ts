@@ -268,6 +268,9 @@ export interface WaterSystemGraphicCardConfig extends EnergyCardBaseConfig {
   entity_pump_state?: string;
   entity_pump_flow_rate?: string;
   entity_pump_power?: string;
+  entity_water_maker_state?: string;
+  entity_water_maker_flow_rate?: string;
+  monitor_entities?: string[];
 }
 
 export interface PowerSourcesGraphCardConfig extends EnergyCardBaseConfig {
