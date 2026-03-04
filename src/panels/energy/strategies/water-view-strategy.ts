@@ -49,10 +49,13 @@ export class WaterViewStrategy extends ReactiveElement {
 
     if (hasWaterSources) {
       section.cards!.push({
-        title: hass.localize("ui.panel.energy.cards.energy_water_graph_title"),
-        type: "energy-water-graph",
+        type: "water-system-graphic",
         collection_key: collectionKey,
+        grid_options: {
+          columns: 12,
+        },
       });
+
       section.cards!.push({
         title: hass.localize(
           "ui.panel.energy.cards.energy_sources_table_title"
@@ -60,6 +63,15 @@ export class WaterViewStrategy extends ReactiveElement {
         type: "energy-sources-table",
         collection_key: collectionKey,
         types: ["water"],
+      });
+
+      section.cards!.push({
+        title: hass.localize("ui.panel.energy.cards.energy_water_graph_title"),
+        type: "energy-water-graph",
+        collection_key: collectionKey,
+        grid_options: {
+          columns: 24,
+        },
       });
     }
 

@@ -251,6 +251,25 @@ export interface WaterSankeyCardConfig extends EnergyCardBaseConfig {
   group_by_area?: boolean;
 }
 
+export interface WaterFlowSankeyCardConfig extends EnergyCardBaseConfig {
+  type: "water-flow-sankey";
+  title?: string;
+  layout?: "vertical" | "horizontal" | "auto";
+  group_by_floor?: boolean;
+  group_by_area?: boolean;
+}
+
+export interface WaterSystemGraphicCardConfig extends EnergyCardBaseConfig {
+  type: "water-system-graphic";
+  title?: string;
+  entity_tank_level?: string;
+  entity_tank_volume?: string;
+  entity_tank_capacity?: string;
+  entity_pump_state?: string;
+  entity_pump_flow_rate?: string;
+  entity_pump_power?: string;
+}
+
 export interface PowerSourcesGraphCardConfig extends EnergyCardBaseConfig {
   type: "power-sources-graph";
   title?: string;
