@@ -94,21 +94,40 @@ export class HuiWaterSystemGraphicCard
       return nothing;
     }
 
+    const waterSource = this._data.prefs.energy_sources.find(
+      (source) => source.type === "water"
+    ) as any;
+
     const tankLevelEntity =
-      this._config.entity_tank_level || this._discovered.tankLevel;
+      this._config.entity_tank_level ||
+      waterSource?.entity_tank_level ||
+      this._discovered.tankLevel;
     const tankVolumeEntity =
-      this._config.entity_tank_volume || this._discovered.tankVolume;
-    const tankCapacityEntity = this._config.entity_tank_capacity;
+      this._config.entity_tank_volume ||
+      waterSource?.entity_tank_volume ||
+      this._discovered.tankVolume;
+    const tankCapacityEntity =
+      this._config.entity_tank_capacity || waterSource?.entity_tank_capacity;
     const pumpStateEntity =
-      this._config.entity_pump_state || this._discovered.pumpState;
+      this._config.entity_pump_state ||
+      waterSource?.entity_pump_state ||
+      this._discovered.pumpState;
     const pumpFlowRateEntity =
-      this._config.entity_pump_flow_rate || this._discovered.pumpFlowRate;
+      this._config.entity_pump_flow_rate ||
+      waterSource?.entity_pump_flow_rate ||
+      this._discovered.pumpFlowRate;
     const pumpPowerEntity =
-      this._config.entity_pump_power || this._discovered.pumpPower;
+      this._config.entity_pump_power ||
+      waterSource?.entity_pump_power ||
+      this._discovered.pumpPower;
     const waterMakerStateEntity =
-      this._config.entity_water_maker_state || this._discovered.waterMakerState;
+      this._config.entity_water_maker_state ||
+      waterSource?.entity_water_maker_state ||
+      this._discovered.waterMakerState;
     const waterMakerFlowRateEntity =
-      this._config.entity_water_maker_flow_rate || this._discovered.waterMakerFlowRate;
+      this._config.entity_water_maker_flow_rate ||
+      waterSource?.entity_water_maker_flow_rate ||
+      this._discovered.waterMakerFlowRate;
 
     const tankLevel = this._readPercent(
       tankLevelEntity,
@@ -145,7 +164,8 @@ export class HuiWaterSystemGraphicCard
       pumpOn,
       waterMakerFlowRateEntity,
       waterMakerFlowRateLMin,
-      waterMakerOn
+      waterMakerOn,
+      waterSource?.monitor_entities
     );
 
     const fillHeight = Math.round((Math.max(0, Math.min(100, tankLevel || 0)) / 100) * 112);
@@ -244,7 +264,8 @@ export class HuiWaterSystemGraphicCard
     pumpOn: boolean,
     waterMakerFlowRateEntity: string | undefined,
     waterMakerFlowRateLMin: number | undefined,
-    waterMakerOn: boolean
+    waterMakerOn: boolean,
+    sourceMonitorEntities?: string[]
   ): Array<{ name: string; on: boolean; flow?: number; powerW?: number }> {
     const rows: Array<{ name: string; on: boolean; flow?: number; powerW?: number }> = [];
 
@@ -284,21 +305,24 @@ export class HuiWaterSystemGraphicCard
       });
     }
 
-    if (this._config?.monitor_entities) {
-      for (const entityId of this._config.monitor_entities) {
-        const state = this.hass.states[entityId];
-        if (!state) continue;
-        const flow = getFlowRateFromState(state);
-        const powerW = this._readPowerW(entityId);
-        const on = this._isPumpOn(entityId, flow, powerW);
+    const configuredMonitors = [
+      ...(sourceMonitorEntities || []),
+      ...(this._config?.monitor_entities || []),
+    ];
 
-        rows.push({
-          name: state.attributes.friendly_name || entityId,
-          on,
-          flow,
-          powerW,
-        });
-      }
+    for (const entityId of configuredMonitors) {
+      const state = this.hass.states[entityId];
+      if (!state) continue;
+      const flow = getFlowRateFromState(state);
+      const powerW = this._readPowerW(entityId);
+      const on = this._isPumpOn(entityId, flow, powerW);
+
+      rows.push({
+        name: state.attributes.friendly_name || entityId,
+        on,
+        flow,
+        powerW,
+      });
     }
 
     return rows;

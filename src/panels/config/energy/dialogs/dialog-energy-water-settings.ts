@@ -155,6 +155,77 @@ export class DialogEnergyWaterSettings
           )}
         ></ha-statistic-picker>
 
+        <h3>Water system graphics</h3>
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["sensor"]'
+          .value=${this._source.entity_tank_level}
+          label="Tank level (%) entity"
+          @value-changed=${this._tankLevelEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["sensor"]'
+          .value=${this._source.entity_tank_volume}
+          label="Tank volume (L/m³) entity"
+          @value-changed=${this._tankVolumeEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["sensor"]'
+          .value=${this._source.entity_tank_capacity}
+          label="Tank capacity entity"
+          @value-changed=${this._tankCapacityEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["binary_sensor", "switch"]'
+          .value=${this._source.entity_pump_state}
+          label="Main pump state entity"
+          @value-changed=${this._pumpStateEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-statistic-picker
+          .hass=${this.hass}
+          .includeUnitClass=${flowRateUnitClasses}
+          .value=${this._source.entity_pump_flow_rate}
+          label="Main pump flow-rate statistic"
+          @value-changed=${this._pumpFlowRateEntityChanged}
+        ></ha-statistic-picker>
+
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["sensor"]'
+          .value=${this._source.entity_pump_power}
+          label="Main pump power entity"
+          @value-changed=${this._pumpPowerEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          .hass=${this.hass}
+          include-domains='["binary_sensor", "switch"]'
+          .value=${this._source.entity_water_maker_state}
+          label="Water maker state entity"
+          @value-changed=${this._waterMakerStateEntityChanged}
+        ></ha-entity-picker>
+
+        <ha-statistic-picker
+          .hass=${this.hass}
+          .includeUnitClass=${flowRateUnitClasses}
+          .value=${this._source.entity_water_maker_flow_rate}
+          label="Water maker flow-rate statistic"
+          @value-changed=${this._waterMakerFlowRateEntityChanged}
+        ></ha-statistic-picker>
+
+        <ha-textfield
+          label="Monitor entities (comma-separated entity IDs)"
+          .value=${(this._source.monitor_entities || []).join(",")}
+          @change=${this._monitorEntitiesChanged}
+        ></ha-textfield>
+
         <p>
           ${this.hass.localize("ui.panel.config.energy.water.dialog.cost_para")}
         </p>
@@ -272,6 +343,58 @@ export class DialogEnergyWaterSettings
         </ha-dialog-footer>
       </ha-dialog>
     `;
+  }
+
+  private _setSourceField(field: keyof WaterSourceTypeEnergyPreference, value) {
+    this._source = {
+      ...this._source!,
+      [field]: value || undefined,
+    };
+  }
+
+  private _tankLevelEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_tank_level", ev.detail.value);
+  }
+
+  private _tankVolumeEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_tank_volume", ev.detail.value);
+  }
+
+  private _tankCapacityEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_tank_capacity", ev.detail.value);
+  }
+
+  private _pumpStateEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_pump_state", ev.detail.value);
+  }
+
+  private _pumpFlowRateEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_pump_flow_rate", ev.detail.value);
+  }
+
+  private _pumpPowerEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_pump_power", ev.detail.value);
+  }
+
+  private _waterMakerStateEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_water_maker_state", ev.detail.value);
+  }
+
+  private _waterMakerFlowRateEntityChanged(ev: ValueChangedEvent<string>) {
+    this._setSourceField("entity_water_maker_flow_rate", ev.detail.value);
+  }
+
+  private _monitorEntitiesChanged(ev: Event) {
+    const raw = (ev.target as HTMLInputElement).value || "";
+    const values = raw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    this._source = {
+      ...this._source!,
+      monitor_entities: values,
+    };
   }
 
   private _handleCostChanged(ev: CustomEvent) {

@@ -85,6 +85,7 @@ export const emptyWaterEnergyPreference =
     stat_cost: null,
     entity_energy_price: null,
     number_energy_price: null,
+    monitor_entities: [],
   });
 
 interface EnergySolarForecast {
@@ -187,6 +188,17 @@ export interface WaterSourceTypeEnergyPreference {
   entity_energy_price: string | null;
   number_energy_price: number | null;
   unit_of_measurement?: string | null;
+
+  // Optional dashboard-specific entities for water system graphics
+  entity_tank_level?: string;
+  entity_tank_volume?: string;
+  entity_tank_capacity?: string;
+  entity_pump_state?: string;
+  entity_pump_flow_rate?: string;
+  entity_pump_power?: string;
+  entity_water_maker_state?: string;
+  entity_water_maker_flow_rate?: string;
+  monitor_entities?: string[];
 }
 
 export type EnergySource =
