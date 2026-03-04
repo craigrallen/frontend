@@ -169,6 +169,23 @@ export class EnergyOverviewViewStrategy extends ReactiveElement {
               },
         ],
       });
+
+      if (hasWaterSources) {
+        view.sections!.push({
+          type: "grid",
+          cards: [
+            {
+              title: hass.localize(
+                "ui.panel.energy.cards.energy_sources_table_title"
+              ),
+              type: "energy-sources-table",
+              collection_key: collectionKey,
+              types: ["water"],
+              show_only_totals: true,
+            },
+          ],
+        });
+      }
     }
 
     return view;
