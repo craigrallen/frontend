@@ -69,6 +69,8 @@ const LAZY_LOAD_TYPES = {
   "water-sankey": () => import("../cards/water/hui-water-sankey-card"),
   "water-flow-sankey": () =>
     import("../cards/water/hui-water-flow-sankey-card"),
+  "water-system-graphic": () =>
+    import("../cards/water/hui-water-system-graphic-card"),
   "power-sources-graph": () =>
     import("../cards/energy/hui-power-sources-graph-card"),
   "power-sankey": () => import("../cards/energy/hui-power-sankey-card"),
