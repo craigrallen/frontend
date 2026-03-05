@@ -8,6 +8,7 @@ import type {
   GridSourceTypeEnergyPreference,
   SolarSourceTypeEnergyPreference,
   WaterSourceTypeEnergyPreference,
+  WindSourceTypeEnergyPreference,
 } from "../../../../data/energy";
 import type { StatisticsMetaData } from "../../../../data/recorder";
 
@@ -43,6 +44,12 @@ export interface EnergySettingsWaterDialogParams {
   metadata?: StatisticsMetaData;
   water_sources: WaterSourceTypeEnergyPreference[];
   saveCallback: (source: WaterSourceTypeEnergyPreference) => Promise<void>;
+}
+
+export interface EnergySettingsWindDialogParams {
+  source?: WindSourceTypeEnergyPreference;
+  wind_sources: WindSourceTypeEnergyPreference[];
+  saveCallback: (source: WindSourceTypeEnergyPreference) => Promise<void>;
 }
 
 export interface EnergySettingsDeviceDialogParams {
@@ -121,6 +128,17 @@ export const showEnergySettingsDeviceWaterDialog = (
   fireEvent(element, "show-dialog", {
     dialogTag: "dialog-energy-device-settings-water",
     dialogImport: () => import("./dialog-energy-device-settings-water"),
+    dialogParams: dialogParams,
+  });
+};
+
+export const showEnergySettingsWindDialog = (
+  element: HTMLElement,
+  dialogParams: EnergySettingsWindDialogParams
+): void => {
+  fireEvent(element, "show-dialog", {
+    dialogTag: "dialog-energy-wind-settings",
+    dialogImport: () => import("./dialog-energy-wind-settings"),
     dialogParams: dialogParams,
   });
 };

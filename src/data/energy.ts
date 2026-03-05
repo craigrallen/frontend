@@ -201,12 +201,29 @@ export interface WaterSourceTypeEnergyPreference {
   monitor_entities?: string[];
 }
 
+export interface WindSourceTypeEnergyPreference {
+  type: "wind";
+
+  // kWh production statistic
+  stat_energy_from: string;
+
+  // Instantaneous power output (W or kW)
+  stat_rate?: string;
+}
+
+export const emptyWindEnergyPreference =
+  (): WindSourceTypeEnergyPreference => ({
+    type: "wind",
+    stat_energy_from: "",
+  });
+
 export type EnergySource =
   | SolarSourceTypeEnergyPreference
   | GridSourceTypeEnergyPreference
   | BatterySourceTypeEnergyPreference
   | GasSourceTypeEnergyPreference
-  | WaterSourceTypeEnergyPreference;
+  | WaterSourceTypeEnergyPreference
+  | WindSourceTypeEnergyPreference;
 
 export interface EnergyPreferences {
   energy_sources: EnergySource[];
@@ -285,6 +302,7 @@ export interface EnergySourceByType {
   battery?: BatterySourceTypeEnergyPreference[];
   gas?: GasSourceTypeEnergyPreference[];
   water?: WaterSourceTypeEnergyPreference[];
+  wind?: WindSourceTypeEnergyPreference[];
 }
 
 export const energySourcesByType = (prefs: EnergyPreferences) =>
@@ -320,7 +338,7 @@ export const getReferencedStatisticIds = (
       continue;
     }
 
-    if (source.type === "solar") {
+    if (source.type === "solar" || source.type === "wind") {
       statIDs.push(source.stat_energy_from);
       continue;
     }
@@ -392,7 +410,7 @@ export const getReferencedStatisticIdsPower = (
       continue;
     }
 
-    if (source.type === "solar") {
+    if (source.type === "solar" || source.type === "wind") {
       statIDs.push(source.stat_rate);
       continue;
     }
